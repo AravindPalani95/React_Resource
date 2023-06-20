@@ -25,7 +25,12 @@ function NavigationBar(props) {
         {
             menuName: 'Notifications',
             path: '/notifications'
-        }]
+        },
+        {
+            menuName: 'Payment Bucket',
+            path: '/paymentbucket'
+        }
+    ]
     const [isOpen, setIsOpen] = useState(false);
     // toggle drawer
     const toggleDrawer = (open) => {

@@ -1,3 +1,4 @@
+import Bucket from "../components/buckets/Bucket"
 import Dashboard from "../components/dashboard/Dashboard"
 import Notifications from "../components/notifications/Notifications"
 import Reports from "../components/reports/Reports"
@@ -21,6 +22,12 @@ const NotificationsPage = () =>{
     )
 }
 
+const PaymentBucket = () =>{
+    return (
+        <Bucket/>
+    )
+}
+
 const RoutesConfig = [
     {
         path: '/dashboard',
@@ -38,6 +45,11 @@ const RoutesConfig = [
         path: '/notifications',
         sidebarName: 'Notifications',
         component: NotificationsPage
+    },
+    {
+        path: '/paymentbucket',
+        sidebarName: 'Payment Bucket',
+        component: PaymentBucket
     },
     {
         path: '/',
