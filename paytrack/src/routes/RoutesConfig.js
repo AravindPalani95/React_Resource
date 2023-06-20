@@ -1,4 +1,7 @@
 import Dashboard from "../components/dashboard/Dashboard"
+import Notifications from "../components/notifications/Notifications"
+import Reports from "../components/reports/Reports"
+import ReportPageV1 from "../components/reports/ReportsV1"
 
 const DashboardPage = () =>{
     return(
@@ -8,13 +11,13 @@ const DashboardPage = () =>{
 
 const ReportsPage = () =>{
     return(
-        <h1>Reports</h1>
+        <ReportPageV1/>
     )
 }
 
 const NotificationsPage = () =>{
     return(
-        <h1>Notification</h1>
+        <Notifications/>
     )
 }
 
