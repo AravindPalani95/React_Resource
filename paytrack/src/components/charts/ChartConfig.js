@@ -1,4 +1,5 @@
-export const chartDataTemplate = {
+export const chartDataTemplate = () => {
+return {
     labels: [],
     datasets: [{
       label: '',
@@ -23,4 +24,5 @@ export const chartDataTemplate = {
       ],
       borderWidth: 1
     }]
-  };
+  }
+}

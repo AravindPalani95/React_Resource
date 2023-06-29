@@ -5,12 +5,14 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import ReportList from './ReportList';
 import ReportPreviewModal from './ReportPreviewModal';
+import axios from 'axios';
 
 class ReportPageV1 extends Component {
     constructor(props) {
         super(props);
         this.state = {
             reportName: '',
+            reportColumns: [],
             query: {
                 combinator: 'and',
                 rules: []
@@ -27,6 +29,10 @@ class ReportPageV1 extends Component {
         };
     }
 
+    componentDidMount(){
+        this.loadReportColumns()
+    }
+
     handleReportNameChange = (event) => {
         this.setState({ reportName: event.target.value });
     };
@@ -40,8 +46,7 @@ class ReportPageV1 extends Component {
         if (query.rules.length === 0) {
             return '';
         }
-        const columns = query.rules.map((rule) => rule.field);
-        const queryPrefix = 'SELECT ' + columns.join() + ' FROM <<table>> WHERE ';
+        const queryPrefix = 'SELECT * FROM <<table>> WHERE ';
         return queryPrefix + formatQuery(query, 'sql');
     };
 
@@ -64,7 +69,7 @@ class ReportPageV1 extends Component {
 
         // Fetch report data using the selectedReport ID or other identifier
         // Replace the sample data with the actual fetched report data
-        const reportData = {
+        /*const reportData = {
             columns: [
                 { field: 'id', headerName: 'ID', width: 100 },
                 { field: 'name', headerName: 'Name', width: 150 },
@@ -76,9 +81,21 @@ class ReportPageV1 extends Component {
                 { id: 2, name: 'Jane Smith', age: 30, email: 'jane.smith@example.com' },
                 // Add more rows as needed
             ],
-        };
+        };*/
 
-        this.setState({ isPreviewOpen: true, previewReportData: reportData });
+        let requestBody = {}
+        requestBody['queryWhereClause'] = 'where ' + formatQuery(this.state.query, 'sql')
+        requestBody['limit'] = 50
+        axios.post('/reports/previewReportByQuery', requestBody).then(res => {
+            if(res.data.length > 0){
+              let tableData = {}
+              tableData['rows'] = res.data
+              let rowData = res.data[0]
+              tableData['cols'] = Object.keys(rowData).map(r => {return {"field": r.key, "headerName": r.key.toUpperCase()}})
+
+              this.setState({ isPreviewOpen: true, previewReportData: tableData });
+            }
+        })
     };
 
     handleClosePreview = () => {
@@ -140,6 +157,20 @@ class ReportPageV1 extends Component {
         });
       };
 
+    loadReportColumns = () =>{
+        axios.get('/reports/getAllColumnNames')
+        .then((response) => {
+            let data = response.data
+            if(data.length > 0){
+                let cols = data.map(d => {return {"name": d, "label": d}})
+                this.setState({reportColumns: cols})
+            }
+        })
+        .catch(err => {
+            console.err(err)
+        })
+    }
+
     render() {
         const { reportName, query, selectedReport, isUpdateMode, error, isPreviewOpen, previewReportData, reports } = this.state;
 
@@ -160,7 +191,7 @@ class ReportPageV1 extends Component {
                             helperText={error && reportName.trim() === '' ? 'Report Name cannot be empty' : ''}
                         />
 
-                        <QueryBuilder query={query} onQueryChange={this.handleQueryChange} />
+                        <QueryBuilder fields={this.state.reportColumns} query={query} onQueryChange={this.handleQueryChange} />
 
                         <Accordion sx={{ marginTop: '16px' }}>
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>

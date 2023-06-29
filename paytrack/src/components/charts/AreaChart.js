@@ -28,23 +28,72 @@ import {
 class AreaChart extends React.Component {
     constructor(props) {
         super(props)
+        this.state = {
+            chartTitle: this.props.chartTitle,
+            areaChartData: [],
+            options: {}
+        }
     }
-    render() {
-        let data = this.props.data;
-        let areaChartData = chartDataTemplate
-        let chartLabels = data.map(d => d.category)
-        let chartData = data.map(d => d.value)
-        let chartTitle = 'Payment Failures'
-        areaChartData.datasets[0].data = chartData
-        areaChartData.datasets[0]["fill"]=true
-        areaChartData.labels = chartLabels
-        areaChartData.datasets[0].label = chartTitle
 
-        return (
-            <div id={chartTitle+ 16198}>
-                <Line data={areaChartData} redraw={true}></Line>
-            </div>
-        )
+    componentDidUpdate(prevProps) {
+        if (prevProps.areaData !== this.props.areaData) {
+            this.parseChartData()
+        }
+    }
+
+    parseChartData() {
+        let options = {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: this.props.chartTitle,
+                },
+            },
+            maintainAspectRatio: false
+        };
+
+        if (this.props.areaData.length !== 0) {
+            let data = this.props.areaData;
+            let areaChartData = chartDataTemplate()
+            let chartLabels = data.map(d => d.date)
+            let chartData = data.map(d => d.count)
+            let chartTitle = this.props.chartTitle
+            areaChartData.datasets[0].data = chartData
+            areaChartData.datasets[0]["fill"] = true
+            areaChartData.labels = chartLabels
+            areaChartData.datasets[0].label = chartTitle
+
+            this.setState({
+                areaChartData: areaChartData,
+                chartTitle: chartTitle,
+                options: options
+            })
+        }
+        else{
+            this.setState({
+                areaChartData: [],
+                chartTitle: this.props.chartTitle,
+                options: options
+            })
+        }
+    }
+
+
+    render() {
+        if(this.state.areaChartData.length !== 0){
+            return (
+                <div id={this.state.chartTitle} style={{height: 300, width: "100%"}}>
+                    <Line options={this.state.options} data={this.state.areaChartData}></Line>
+                </div>
+            )
+        }
+        else {
+            return (<div>Loading....</div>)
+        }
     }
 }
 
