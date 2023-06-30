@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Box, IconButton } from '@mui/material';
+import { Modal, Box, IconButton, Alert } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -16,9 +16,13 @@ const ReportPreviewModal = ({ open, onClose, reportData }) => {
                     padding: '16px',
                     outline: 'none',
                     borderRadius: '4px',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}
             >
-                <h2 id="report-preview-modal-title">Report Preview</h2>
+                <h3 id="report-preview-modal-title" style={{
+                    marginBottom: '16px', color: '#1976d2'
+                }}>REPORT PREVIEW</h3>
                 <IconButton
                     color="inherit"
                     onClick={onClose}
@@ -30,19 +34,32 @@ const ReportPreviewModal = ({ open, onClose, reportData }) => {
                 >
                     <CloseIcon />
                 </IconButton>
-                <div style={{ height: 400, width: '100%', marginTop: '48px', maxWidth: '800px' }}>
-                    {reportData ? (
-                        <DataGrid
-                            columns={reportData.columns}
-                            rows={reportData.rows}
-                            pageSizeOptions={[5]}
-                            autoHeight
-                            disableColumnMenu
-                            disableSelectionOnClick
-                        />
+                <div style={{ height: 450, width: '100%', maxWidth: '800px', overflowX: 'auto' }}>
+                    {reportData && reportData.cols.length > 0 ? (
+                        <>
+                            <Alert severity="info">
+                                Preview Show Only First <strong>50 Records</strong>
+                            </Alert>
+                            <DataGrid
+                                columns={reportData.cols}
+                                rows={reportData.rows}
+                                autoHeight
+                                getRowId={(row) => row.paymentFailuresDataID}
+                                initialState={{
+                                    pagination: {
+                                        paginationModel: { pageSize: 5, page: 0 },
+                                    }
+                                }}
+                            />
+                        </>
                     ) : (
-                        <div>No report data available.</div>
-                    )}
+                        <DataGrid
+                          columns={[]}
+                          rows={[]}
+                          autoHeight
+                          getRowId={() => ''}
+                        />
+                      )}
                 </div>
             </Box>
         </Modal>

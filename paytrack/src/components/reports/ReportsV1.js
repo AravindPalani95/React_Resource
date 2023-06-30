@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { QueryBuilder, formatQuery } from 'react-querybuilder';
-import { TextField, Button, Accordion, AccordionSummary, AccordionDetails, Typography, Box } from '@mui/material';
+import { TextField, Button, Accordion, AccordionSummary, AccordionDetails, Typography, Box, Grid, Breadcrumbs } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import ReportList from './ReportList';
@@ -21,16 +21,13 @@ class ReportPageV1 extends Component {
             isUpdateMode: false,
             error: '',
             isPreviewOpen: false,
-            reports: [
-                { id: 1, name: 'Report 1', query: { combinator: 'and', rules: [] } },
-                { id: 2, name: 'Report 2', query: { combinator: 'and', rules: [] } },
-                { id: 3, name: 'Report 3', query: { combinator: 'and', rules: [] } }
-              ]
+            reports: []
         };
     }
 
-    componentDidMount(){
+    componentDidMount() {
         this.loadReportColumns()
+        this.loadAllReports()
     }
 
     handleReportNameChange = (event) => {
@@ -64,47 +61,29 @@ class ReportPageV1 extends Component {
     };
 
     handlePreview = () => {
-        // Handle preview logic, e.g., fetch the report data
-        const { selectedReport } = this.state;
-
-        // Fetch report data using the selectedReport ID or other identifier
-        // Replace the sample data with the actual fetched report data
-        /*const reportData = {
-            columns: [
-                { field: 'id', headerName: 'ID', width: 100 },
-                { field: 'name', headerName: 'Name', width: 150 },
-                { field: 'age', headerName: 'Age', width: 100 },
-                { field: 'email', headerName: 'Email', width: 200 },
-            ],
-            rows: [
-                { id: 1, name: 'John Doe', age: 25, email: 'john.doe@example.com' },
-                { id: 2, name: 'Jane Smith', age: 30, email: 'jane.smith@example.com' },
-                // Add more rows as needed
-            ],
-        };*/
-
         let requestBody = {}
         requestBody['queryWhereClause'] = 'where ' + formatQuery(this.state.query, 'sql')
         requestBody['limit'] = 50
         axios.post('/reports/previewReportByQuery', requestBody).then(res => {
-            if(res.data.length > 0){
-              let tableData = {}
-              tableData['rows'] = res.data
-              let rowData = res.data[0]
-              tableData['cols'] = Object.keys(rowData).map(r => {return {"field": r.key, "headerName": r.key.toUpperCase()}})
+            if (res.data.length > 0) {
+                let tableData = {}
+                tableData['rows'] = res.data
+                let rowData = res.data[0]
+                tableData['cols'] = Object.keys(rowData).map(r => { return { "field": r, "headerName": r.toUpperCase() } })
 
-              this.setState({ isPreviewOpen: true, previewReportData: tableData });
+                this.setState({ isPreviewOpen: true, previewReportData: tableData });
+            }
+            else{
+                let tableData = {}
+                tableData['rows'] = []
+                tableData['cols'] = []
+                this.setState({ isPreviewOpen: true, previewReportData: tableData });
             }
         })
     };
 
-    handleClosePreview = () => {
-        this.setState({ isPreviewOpen: false });
-    };
-
-
     handleCreate = () => {
-        const { reportName, query, isUpdateMode } = this.state;
+        const { reportName, query, selectedReport, isUpdateMode } = this.state;
 
         if (reportName.trim() === '') {
             this.setState({ error: 'Report Name cannot be empty' });
@@ -117,58 +96,82 @@ class ReportPageV1 extends Component {
         }
 
         const reportData = {
-            id: Date.now(),
-            name: reportName,
-            query: query
+            reportName: reportName,
+            queryJson: JSON.stringify(query),
+            chartType: 'table',
+            reportType: 'user'
         };
 
         if (isUpdateMode) {
             // Handle update report logic
             // Update the existing report with the updated reportData
             console.log('Updating report:', reportData);
+            this.updateReport(reportData,selectedReport.reportID)
         } else {
             // Handle create report logic
             // Create a new report using the reportData
             console.log('Creating report:', reportData);
-            this.addReportToList(reportData);
+            this.createReport(reportData)
         }
     };
 
-    addReportToList = (reportData) => {
+    createReport(reportData){
+        axios.post('/reports', reportData)
+        .then(response => this.loadAllReports())
+        .catch(err => console.error(err))
+    }
+
+    updateReport(reportData, reportId){
+        axios.put(`/reports/${reportId}`, reportData)
+        .then(response => this.loadAllReports())
+        .catch(err => console.error(err))
+    }
+
+    /*addReportToList = (reportData) => {
         // Add the report to the list of reports in the state
         this.setState((prevState) => ({
-          reports: [...prevState.reports, reportData]
+            reports: [...prevState.reports, reportData]
         }));
-      };
+    };*/
 
     handleReportSelect = (report) => {
         this.setState({
             selectedReport: report,
-            reportName: report.name,
-            query: report.query,
+            reportName: report.reportName,
+            query: JSON.parse(report.queryJson),
             isUpdateMode: true
         });
     };
 
     handleClosePreview = () => {
         this.setState({
-          isPreviewOpen: false,
-          previewReportData: null
+            isPreviewOpen: false,
+            previewReportData: null
         });
-      };
+    };
 
-    loadReportColumns = () =>{
+    loadReportColumns = () => {
         axios.get('/reports/getAllColumnNames')
-        .then((response) => {
+            .then((response) => {
+                let data = response.data
+                if (data.length > 0) {
+                    let cols = data.map(d => { return { "name": d, "label": d } })
+                    this.setState({ reportColumns: cols })
+                }
+            })
+            .catch(err => {
+                console.err(err)
+            })
+    }
+
+    loadAllReports(){
+        axios.get('/reports')
+        .then(response => {
             let data = response.data
-            if(data.length > 0){
-                let cols = data.map(d => {return {"name": d, "label": d}})
-                this.setState({reportColumns: cols})
-            }
-        })
-        .catch(err => {
-            console.err(err)
-        })
+            let reports = data['_embedded']['reports']
+            this.setState({reports:reports})
+
+        }).catch(err => console.error(err))
     }
 
     render() {
@@ -176,9 +179,22 @@ class ReportPageV1 extends Component {
 
         return (
             <div>
+                
+                <Box sx={{ flexGrow: 1, mt: 2, ml: 2, mr: 2 }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <Box display="flex" alignItems="center" sx={{height:"100%"}}>
+                                <Breadcrumbs aria-label="breadcrumb">
+                                    <Typography>MENU</Typography>
+                                    <Typography color="textPrimary">REPORTS</Typography>
+                                </Breadcrumbs>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Box sx={{ outline: '1px solid #000', padding: '16px', flex: '1 1 50%', marginRight: '16px', marginBottom: '16px', marginTop: '2rem', marginLeft: '2rem' }}>
-                        <Typography variant="h6" sx={{ textTransform: 'uppercase', marginBottom: '16px' }}>
+                    <Box sx={{ outline: '1px solid #1565c0', padding: '16px', flex: '1 1 50%', marginRight: '16px', marginBottom: '16px', ml:2, mt:2 }}>
+                        <Typography color="primary" variant="h6" sx={{ textTransform: 'uppercase', marginBottom: '16px' }}>
                             CREATE REPORT
                         </Typography>
 
@@ -190,14 +206,26 @@ class ReportPageV1 extends Component {
                             error={error && reportName.trim() === ''}
                             helperText={error && reportName.trim() === '' ? 'Report Name cannot be empty' : ''}
                         />
-
-                        <QueryBuilder fields={this.state.reportColumns} query={query} onQueryChange={this.handleQueryChange} />
-
+                        <Box sx={{
+                            height: 230, background: 'rgba(0, 75, 183, 0.2)', overflowY: 'auto',
+                            '&::-webkit-scrollbar': { width: '8px' },
+                            '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                            '&::-webkit-scrollbar-thumb': { backgroundColor: '#888888', borderRadius: '4px' },
+                            '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' }
+                        }}>
+                            <QueryBuilder fields={this.state.reportColumns} query={query} onQueryChange={this.handleQueryChange} />
+                        </Box>
                         <Accordion sx={{ marginTop: '16px' }}>
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                Query Details
+                                Query
                             </AccordionSummary>
-                            <AccordionDetails>
+                            <AccordionDetails sx={{
+                                maxHeight: '80px', overflowY: 'auto',
+                                '&::-webkit-scrollbar': { width: '8px' },
+                                '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                                '&::-webkit-scrollbar-thumb': { backgroundColor: '#888888', borderRadius: '4px' },
+                                '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' }
+                            }}>
                                 {this.generateQuery()}
                             </AccordionDetails>
                         </Accordion>
@@ -224,9 +252,18 @@ class ReportPageV1 extends Component {
                         </Box>
                     </Box>
 
-                    <Box sx={{ outline: '1px solid #000', padding: '16px', flex: '1 1 50%', marginBottom: '16px', marginRight: '2rem', marginTop: '2rem' }}>
-                        <Typography variant="h6" sx={{ textTransform: 'uppercase', marginBottom: '16px' }}>
-                            REPORT LIST
+                    <Box sx={{
+                        outline: '1px solid #1565c0', padding: '16px', flex: '1 1 50%', marginBottom: '16px',
+                        mr:2,
+                        mt:2,
+                        maxHeight: '600px', overflowY: 'auto',
+                        '&::-webkit-scrollbar': { width: '8px' },
+                        '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                        '&::-webkit-scrollbar-thumb': { backgroundColor: '#888888', borderRadius: '4px' },
+                        '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' }
+                    }}>
+                        <Typography color="primary" variant="h6" sx={{ textTransform: 'uppercase', marginBottom: '16px' }}>
+                            LIST REPORTS
                         </Typography>
                         <ReportList reports={reports} onSelect={this.handleReportSelect} selectedReport={selectedReport} />
                     </Box>

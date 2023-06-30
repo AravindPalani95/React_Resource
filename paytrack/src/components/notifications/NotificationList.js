@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, FormControlLabel, Radio, Divider } from '@mui/material';
+import { List, FormControlLabel, Radio, Divider, Tooltip } from '@mui/material';
 
 const NotificationList = ({
   notifications,
@@ -7,20 +7,39 @@ const NotificationList = ({
   onNotificationClick,
 }) => {
   return (
-    <List component="div">
-      {notifications.map((notification) => (
-        <React.Fragment key={notification.id}>
-          <Divider />
-          <FormControlLabel
-            value={notification.id.toString()}
-            control={<Radio />}
-            label={notification.name}
-            checked={selectedNotification && selectedNotification.id === notification.id}
-            onClick={() => onNotificationClick(notification)}
-          />
-        </React.Fragment>
-      ))}
-    </List>
+    <div>
+      <List component="div">
+        {notifications.map((notification) => (
+          <React.Fragment key={notification.bucketEmailTemplateID}>
+            <Divider />
+            <Tooltip
+              title={
+                <>
+                  <div>
+                    <strong>Bucket Name:</strong> {' ' + notification.bucketName}
+                  </div>
+                  {notification.emailTemplateName ? (
+                    <div>
+                      <strong>Notification Name:</strong>{' ' + notification.emailTemplateName}
+                    </div>) : <></>
+                  }
+                </>
+              }
+            >
+              <FormControlLabel
+                value={notification.bucketEmailTemplateID}
+                control={<Radio />}
+                label={
+                  notification.emailTemplateName ? (notification.bucketName + ' - ' + notification.emailTemplateName) : notification.bucketName
+                }
+                checked={selectedNotification && selectedNotification.bucketEmailTemplateID === notification.bucketEmailTemplateID}
+                onClick={() => onNotificationClick(notification)}
+              />
+            </Tooltip>
+          </React.Fragment>
+        ))}
+      </List>
+    </div>
   );
 };
 
