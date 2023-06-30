@@ -8,9 +8,14 @@ import {
     List,
     ListItemText,
     SwipeableDrawer,
-    ListItemButton
+    ListItemButton,
+    ListItemIcon
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import MailOutlineOutlinedIcon from '@mui/icons-material/MailOutlineOutlined';
+import CallSplitOutlinedIcon from '@mui/icons-material/CallSplitOutlined';
 
 function NavigationBar(props) {
     const menus = [
@@ -35,6 +40,21 @@ function NavigationBar(props) {
     // toggle drawer
     const toggleDrawer = (open) => {
         setIsOpen(open)
+    }
+
+    const getIcon = (menuName) =>{
+        switch(menuName){
+            case 'Dashboard':
+                return <DashboardOutlinedIcon/>
+            case 'Reports':
+                return <TableChartOutlinedIcon/>
+            case 'Notifications':
+                return <MailOutlineOutlinedIcon/>
+            case 'Payment Bucket':
+                return <CallSplitOutlinedIcon/>
+            default:
+                return <></>
+        }
     }
 
     return (
@@ -65,7 +85,12 @@ function NavigationBar(props) {
                         {
                             menus.map(menu => {
                                 return (
-                                    <ListItemButton key={menu.menuName} component={Link} to={menu.path} onClick={() => toggleDrawer(false)}>
+                                    <ListItemButton key={menu.menuName} component={Link} to={menu.path} onClick={() => toggleDrawer(false)} disablePadding>
+                                        <ListItemIcon>
+                                            {
+                                                getIcon(menu.menuName)
+                                            }
+                                        </ListItemIcon>
                                         <ListItemText primary={menu.menuName}></ListItemText>
                                     </ListItemButton>
                                 )
