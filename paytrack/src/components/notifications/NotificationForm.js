@@ -11,6 +11,7 @@ import {
   Alert,
   Box,
   Breadcrumbs,
+  FormHelperText,
 } from '@mui/material';
 import NotificationList from './NotificationList';
 import axios from 'axios';
@@ -172,7 +173,7 @@ const NotificationForm = () => {
       <Box sx={{ display: 'flex', ml: 2, mt: 2, mr: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={6}>
-            <Box
+            <Box border={1}
               sx={{
                 outline: '1px solid #1565c0',
                 padding: '16px',
@@ -199,12 +200,20 @@ const NotificationForm = () => {
             </Box>
           </Grid>
           <Grid item xs={6}>
-            <Box
+            <Box border={1}
               sx={{
                 outline: '1px solid #1565c0',
                 padding: '16px',
-                marginBottom: '16px',
-                height: '520px',
+                height: '550px',
+                maxHeight: '520px',
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': { width: '8px' },
+                '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#888888',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' },
               }}
             >
               <Typography variant="h6" gutterBottom color="primary">
@@ -244,6 +253,7 @@ const NotificationForm = () => {
                       labelId="send-email-label"
                       value={sendEmail}
                       onChange={handleSendEmailChange}
+                      label="sendEmail"
                     >
                       <MenuItem value="Yes">YES</MenuItem>
                       <MenuItem value="No">NO</MenuItem>
@@ -252,11 +262,12 @@ const NotificationForm = () => {
                 </Grid>
                 <Grid item xs={6}>
                   <FormControl fullWidth>
-                    <InputLabel id="use-message-label">Use Message</InputLabel>
+                    <InputLabel id="use-message-label">Use Notification Message</InputLabel>
                     <Select
                       labelId="use-message-label"
                       value={useMessage}
                       onChange={handleUseMessageChange}
+                      label="useNotificationMessage"
                     >
                       <MenuItem value="Yes">YES</MenuItem>
                       <MenuItem value="No">NO</MenuItem>
@@ -274,6 +285,11 @@ const NotificationForm = () => {
                     error={!!errors.notificationMessage}
                     helperText={errors.notificationMessage}
                   />
+                  <FormHelperText>
+                    <Typography variant="body2" color="secondary" style={{ fontSize: '13px', marginTop: '8px' }}>
+                      Please Enter Possible Reasons Separated By Comma in the Notification Message
+                    </Typography>
+                  </FormHelperText>
                 </Grid>
                 <Grid item xs={12}>
                   <Grid container justifyContent="flex-end">

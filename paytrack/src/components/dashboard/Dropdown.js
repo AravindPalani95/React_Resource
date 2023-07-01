@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, MenuItem, FormControl, InputLabel, Grid, Box } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel, Box } from '@mui/material';
 
 class Dropdown extends React.Component {
     handleChange = (event) => {
@@ -30,6 +30,7 @@ class Dropdown extends React.Component {
                         <MenuItem value={1}>Last 1 Month</MenuItem>
                         <MenuItem value={3}>Last 3 Months</MenuItem>
                         <MenuItem value={6}>Last 6 Months</MenuItem>
+                        <MenuItem value={9}>Last 9 Months</MenuItem>
                         <MenuItem value={12}>Last 1 Year</MenuItem>
                     </Select>
                 </FormControl>

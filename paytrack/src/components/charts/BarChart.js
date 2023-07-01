@@ -49,7 +49,7 @@ class BarChart extends React.Component {
                 title: {
                     display: true,
                     text: this.props.chartTitle,
-                },
+                }
             },
         };
 

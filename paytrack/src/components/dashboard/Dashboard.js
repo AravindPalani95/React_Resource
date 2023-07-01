@@ -5,23 +5,38 @@ import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
 import KPYChart from '../charts/KPYChart';
 import BarChart from '../charts/BarChart'
-import PieChart from '../charts/PieChart';
 import AreaChart from '../charts/AreaChart';
 import LineChart from '../charts/LineChart';
-import DoughnutChart from '../charts/DoughnutChart';
 import axios from 'axios'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Dropdown from './Dropdown';
 import { Breadcrumbs, Divider, Typography } from '@mui/material';
 
-const BucketItem = styled(Paper)(({ theme, selected }) => ({
+const getBucketItemColor = (bucket) =>{
+    if(bucket.count === 0){
+        return '#716f74b5'
+    }
+
+    switch(bucket.severity){
+        case 'High':
+            return '#FF2200'
+        case 'Medium':
+            return '#FF7700'
+        case 'Low':
+            return '#FFBB00'
+        default:
+            return '#FFBB00'
+    }
+}
+
+const BucketItem = styled(Paper)(({ theme, selected, bucket }) => ({
     position: 'relative',
-    backgroundColor: '#FFBB00',
+    backgroundColor: getBucketItemColor(bucket),
     ...theme.typography.body2,
     padding: theme.spacing(1),
     textAlign: 'center',
     color: '#fff',
-    border: selected ? '3px solid green' : 'none',
+    border: selected ? '4px solid green' : 'none',
     cursor: 'pointer',
 }));
 
@@ -89,6 +104,8 @@ class Dashboard extends React.Component {
             return "Last Three Months"
         else if (this.state.selectedDuration === 6)
             return "Last Six Months"
+        else if (this.state.selectedDuration === 9)
+            return "Last Nine Months"    
         else if (this.state.selectedDuration === 12)
             return "Last One Year"
     }
@@ -191,9 +208,9 @@ class Dashboard extends React.Component {
                             return (
                                 <Grid item xs={12} sm={6} md={4} lg={3} key={bucket.groupBy}>
                                     <Box
-                                        onClick={() => this.handleBucketItemClick(bucket.groupBy)}
+                                        onClick={bucket.count > 0 ? () => this.handleBucketItemClick(bucket.groupBy) : null}
                                     >
-                                        <BucketItem selected={isSelected}>
+                                        <BucketItem selected={isSelected} bucket={bucket}>
                                             <TickIcon selected={isSelected}>
                                                 {isSelected && <TickIconContent />}
                                             </TickIcon>

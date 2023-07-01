@@ -30,7 +30,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "proxy" : "http://payvisor.ap-south-1.elasticbeanstalk.com",
+  "proxy": "http://payvisor.ap-south-1.elasticbeanstalk.com",
   "eslintConfig": {
     "extends": [
       "react-app",

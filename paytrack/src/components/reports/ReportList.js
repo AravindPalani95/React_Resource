@@ -18,7 +18,7 @@ class ReportList extends Component {
         {reports.length === 0 ? (
           <p>NO REPORTS CREATED</p>
         ) : (
-          <RadioGroup value={selectedReportId} onChange={this.handleReportSelect}>
+          <RadioGroup value={selectedReportId || ''} onChange={this.handleReportSelect}>
             {reports.map((report, index) => (
               <div key={report.reportID}>
                 <FormControlLabel

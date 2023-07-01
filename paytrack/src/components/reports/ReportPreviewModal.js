@@ -34,11 +34,11 @@ const ReportPreviewModal = ({ open, onClose, reportData }) => {
                 >
                     <CloseIcon />
                 </IconButton>
-                <div style={{ height: 450, width: '100%', maxWidth: '800px', overflowX: 'auto' }}>
+                <div style={{ height: 450, width: '800px', overflowX: 'auto' }}>
                     {reportData && reportData.cols.length > 0 ? (
                         <>
                             <Alert severity="info">
-                                Preview Show Only First <strong>50 Records</strong>
+                                Preview Show Only First <strong>50 Records.</strong> Please Use <strong>Download Report.</strong>
                             </Alert>
                             <DataGrid
                                 columns={reportData.cols}

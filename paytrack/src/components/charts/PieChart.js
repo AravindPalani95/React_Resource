@@ -20,7 +20,7 @@ class PieChart extends React.Component {
         pieChartData.datasets[0].label = chartTitle
 
         return (
-            <div id={chartTitle}>
+            <div id={chartTitle} style={{display:"flex", alignItems:""}}>
                 <Pie data={pieChartData} redraw={true}></Pie>
             </div>
         )

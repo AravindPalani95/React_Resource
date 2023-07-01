@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { QueryBuilder, formatQuery } from 'react-querybuilder';
-import { TextField, Button, Accordion, AccordionSummary, AccordionDetails, Typography, Box, Grid, Breadcrumbs, Alert } from '@mui/material';
+import { TextField, Button, Accordion, AccordionSummary, AccordionDetails, Typography, Box, Grid, Breadcrumbs, Alert, Backdrop, CircularProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import 'react-querybuilder/dist/query-builder.css';
 import ReportList from './ReportList';
@@ -24,7 +24,8 @@ class ReportPageV1 extends Component {
             reports: [],
             alertOpen: false,
             alertMsg: '',
-            isSuccess: false
+            isSuccess: false,
+            isLoading: false
         };
     }
 
@@ -44,7 +45,7 @@ class ReportPageV1 extends Component {
     generateQuery = () => {
         const { query } = this.state;
         if (query.rules.length === 0) {
-            return '';
+            return 'SELECT * FROM <<table>>';
         }
         const queryPrefix = 'SELECT * FROM <<table>> WHERE ';
         return queryPrefix + formatQuery(query, 'sql');
@@ -101,23 +102,48 @@ class ReportPageV1 extends Component {
         };
 
         if (isUpdateMode) {
-            // Handle update report logic
             // Update the existing report with the updated reportData
             console.log('Updating report:', reportData);
             this.updateReport(reportData, selectedReport.reportID)
         } else {
-            // Handle create report logic
             // Create a new report using the reportData
             console.log('Creating report:', reportData);
-            this.createReport(reportData)
+            this.createReport(reportData, () => {
+                // Callback function to handle report creation
+                this.loadAllReports(() => {
+                    // Callback function to handle loading all reports
+                    const createdReport = this.state.reports.find(report => report.reportName === reportName);
+                    if (createdReport) {
+                        this.handleReportSelect(createdReport);
+                    }
+                });
+            });
         }
     };
 
-    createReport(reportData) {
-        axios.post('/reports', reportData)
+    handleDelete = () => {
+        const { selectedReport } = this.state;
+        this.deleteReport(selectedReport.reportID)
+    }
+
+    deleteReport(reportId) {
+        axios.delete(`/reports/${reportId}`)
             .then(response => {
                 this.loadAllReports()
+                this.showAlert('Report Deleted Successfully.', true)
+                this.handleClear()
+            })
+            .catch(err => {
+                console.error(err)
+                this.showAlert('Report Delete Failed.', false)
+            })
+    }
+
+    createReport(reportData, callback) {
+        axios.post('/reports', reportData)
+            .then(response => {
                 this.showAlert('Report Created Successfully.', true)
+                callback()
             })
             .catch(err => {
                 console.error(err)
@@ -137,7 +163,7 @@ class ReportPageV1 extends Component {
             })
     }
 
-    showAlert(msg, successFlag){
+    showAlert(msg, successFlag) {
         this.setState({
             alertOpen: true,
             alertMsg: msg,
@@ -151,13 +177,6 @@ class ReportPageV1 extends Component {
             })
         }, 3000)
     }
-
-    /*addReportToList = (reportData) => {
-        // Add the report to the list of reports in the state
-        this.setState((prevState) => ({
-            reports: [...prevState.reports, reportData]
-        }));
-    };*/
 
     handleReportSelect = (report) => {
         this.setState({
@@ -189,12 +208,16 @@ class ReportPageV1 extends Component {
             })
     }
 
-    loadAllReports() {
+    loadAllReports(callback) {
         axios.get('/reports')
             .then(response => {
                 let data = response.data
                 let reports = data['_embedded']['reports']
-                this.setState({ reports: reports })
+                this.setState({ reports: reports }, () => {
+                    if (callback) {
+                        callback(); // Call the callback function after loading all reports
+                    }
+                });
 
             }).catch(err => console.error(err))
     }
@@ -207,6 +230,9 @@ class ReportPageV1 extends Component {
             this.setState({ error: 'Report Name is required' });
             return;
         }
+        // Set loading state
+        this.setState({ isLoading: true });
+
         let requestBody = {};
         requestBody['queryWhereClause'] = 'where ' + formatQuery(this.state.query, 'sql');
         requestBody['reportName'] = reportName;
@@ -230,15 +256,17 @@ class ReportPageV1 extends Component {
                 // Clean up the temporary URL and link element
                 URL.revokeObjectURL(url);
                 link.parentNode.removeChild(link);
+                this.setState({ isLoading: false });
             })
             .catch((error) => {
                 console.error('Error downloading report:', error);
+                this.setState({ isLoading: false })
             });
     };
 
 
     render() {
-        const { reportName, query, selectedReport, isUpdateMode, error, isPreviewOpen, previewReportData, reports, alertOpen, alertMsg, isSuccess } = this.state;
+        const { reportName, query, selectedReport, isUpdateMode, error, isPreviewOpen, previewReportData, reports, alertOpen, alertMsg, isSuccess, isLoading } = this.state;
 
         return (
             <div>
@@ -255,13 +283,13 @@ class ReportPageV1 extends Component {
                     </Grid>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Box sx={{ outline: '1px solid #1565c0', padding: '16px', flex: '1 1 50%', marginRight: '16px', marginBottom: '16px', ml: 2, mt: 2 }}>
+                    <Box border={1} sx={{ outline: '1px solid #1565c0', padding: '16px', flex: '1 1 60%', marginRight: '16px', marginBottom: '16px', ml: 2, mt: 2 }}>
                         <Typography color="primary" variant="h6" sx={{ textTransform: 'uppercase', marginBottom: '16px' }}>
                             {isUpdateMode ? 'UPDATE REPORT' : 'CREATE REPORT'}
                         </Typography>
                         {
                             alertOpen ?
-                                (<Grid item xs={12} sx={{mb:2}}>
+                                (<Grid item xs={12} sx={{ mb: 2 }}>
                                     <Alert variant="filled" severity={isSuccess ? 'success' : 'error'}>
                                         {alertMsg}
                                     </Alert>
@@ -311,11 +339,15 @@ class ReportPageV1 extends Component {
                             <Button variant="contained" color="primary" onClick={this.handleDownload} sx={{ marginRight: '8px' }}>
                                 Download Report
                             </Button>
-
                             {isUpdateMode ? (
-                                <Button variant="contained" color="primary" onClick={this.handleCreate}>
-                                    Update Report
-                                </Button>
+                                <>
+                                    <Button variant="contained" color="primary" onClick={this.handleCreate} sx={{ marginRight: '8px' }}>
+                                        Update Report
+                                    </Button>
+                                    <Button variant="contained" color="primary" onClick={this.handleDelete}>
+                                        Delete Report
+                                    </Button>
+                                </>
                             ) : (
                                 <Button variant="contained" color="primary" onClick={this.handleCreate}>
                                     Create Report
@@ -325,8 +357,8 @@ class ReportPageV1 extends Component {
                         </Box>
                     </Box>
 
-                    <Box sx={{
-                        outline: '1px solid #1565c0', padding: '16px', flex: '1 1 50%', marginBottom: '16px',
+                    <Box border={1} sx={{
+                        outline: '1px solid #1565c0', padding: '16px', flex: '1 1 40%', marginBottom: '16px',
                         mr: 2,
                         mt: 2,
                         maxHeight: '600px', overflowY: 'auto',
@@ -340,6 +372,13 @@ class ReportPageV1 extends Component {
                         </Typography>
                         <ReportList reports={reports} onSelect={this.handleReportSelect} selectedReport={selectedReport} />
                     </Box>
+                    {isLoading && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0, 0, 0, 0.5)' }}>
+                            <Backdrop open={isLoading}>
+                                <CircularProgress color="primary" />
+                            </Backdrop>
+                        </div>
+                    )}
                 </Box>
             </div>
         );

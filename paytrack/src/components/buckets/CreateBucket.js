@@ -11,7 +11,10 @@ import {
   Box,
   Typography,
   Alert,
+  Breadcrumbs,
 } from '@mui/material';
+import ListBuckets from './ListBuckets';
+import axios from 'axios';
 
 class CreateBucket extends Component {
   constructor(props) {
@@ -23,10 +26,30 @@ class CreateBucket extends Component {
       tagInput: '',
       tags: [],
       severity: '',
-      bucketType: '',
       validationErrors: [],
       saveStatus: '',
+      selectedBucket: null,
+      buckets: [],
+      isUpdateMode: false,
     };
+  }
+
+  componentDidMount() {
+    this.loadAllBuckets()
+  }
+
+  loadAllBuckets(callback) {
+    axios.get('/bucketsData').then(response => {
+      let data = response.data
+      this.setState({
+        buckets: data['_embedded']['bucketsData']
+      }, () => {
+        if (callback) {
+          callback(); // Call the callback function after loading all reports
+        }
+      })
+    })
+      .catch(err => console.error(err))
   }
 
   handleTagChange = (event) => {
@@ -64,28 +87,24 @@ class CreateBucket extends Component {
   handleSubmit = async (event) => {
     event.preventDefault();
 
-    const { bucketName, bucketDescription, tags, severity, bucketType } = this.state;
+    const { bucketName, bucketDescription, tags, severity, isUpdateMode } = this.state;
 
     const validationErrors = [];
 
     if (!bucketName) {
-      validationErrors.push('Bucket Name is required.');
+      validationErrors.push('Bucket Name Is Required.');
     }
 
     if (!bucketDescription) {
-      validationErrors.push('Bucket Description is required.');
+      validationErrors.push('Bucket Description Is Required.');
     }
 
     if (tags.length === 0) {
-      validationErrors.push('At least one tag is required.');
+      validationErrors.push('Atleast One Tag is Required.');
     }
 
     if (!severity) {
-      validationErrors.push('Severity is required.');
-    }
-
-    if (!bucketType) {
-      validationErrors.push('Bucket Type is required.');
+      validationErrors.push('Severity Is Required.');
     }
 
     if (validationErrors.length > 0) {
@@ -93,35 +112,54 @@ class CreateBucket extends Component {
       return;
     }
 
-    try {
-      // Perform API call to save data
-      // Example API call using fetch:
-      const response = await fetch('your-api-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bucketName,
-          bucketDescription,
-          tags,
-          severity,
-          bucketType,
-        }),
-      });
+    const bucketData = {
+      bucketName: bucketName.trim(),
+      bucketDescription: bucketDescription,
+      tags: tags.join(),
+      severity: severity
+    };
 
-      if (response.ok) {
-        // Data saved successfully
-        this.setState({ saveStatus: 'success' });
-      } else {
-        // Error occurred while saving data
-        this.setState({ saveStatus: 'error' });
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-      this.setState({ saveStatus: 'error' });
+    if (isUpdateMode) {
+      this.updateReport(bucketData, bucketName)
+    }
+    else {
+      this.createBucket(bucketData, () => {
+        // Callback function to handle report creation
+        this.loadAllBuckets(() => {
+          // Callback function to handle loading all reports
+          const createdBucket = this.state.buckets.find(bucket => bucket.bucketName === bucketName);
+          if (createdBucket) {
+            this.handleBucketSelect(createdBucket);
+          }
+        });
+      })
     }
   };
+
+  createBucket(bucketData, callback) {
+    axios.post('/bucketsData/addBucket', bucketData)
+      .then(response => {
+        this.showAlert('Bucket Created Successfully.', true)
+        callback()
+      })
+      .catch(err => {
+        console.error(err)
+        this.showAlert('Bucket Creation Failed.', false)
+      })
+  }
+
+  updateReport(bucketData, bucketName) {
+    console.log(JSON.stringify(bucketData))
+    axios.put(`/bucketsData/${bucketName}`, bucketData)
+      .then(response => {
+        this.loadAllBuckets()
+        this.showAlert('Bucket Updated Successfully.', true)
+      })
+      .catch(err => {
+        console.error(err)
+        this.showAlert('Bucket Update Failed.', false)
+      })
+  }
 
   clearForm = () => {
     this.setState({
@@ -130,11 +168,38 @@ class CreateBucket extends Component {
       tagInput: '',
       tags: [],
       severity: '',
-      bucketType: '',
       validationErrors: [],
       saveStatus: '',
+      selectedBucket: null,
+      isUpdateMode: false,
     });
   };
+
+  handleBucketSelect = (bucket) => {
+    this.setState({
+      bucketName: bucket.bucketName,
+      bucketDescription: bucket.bucketDescription ? bucket.bucketDescription : '',
+      tags: (bucket.tags && bucket.tags.trim()) !== '' ? bucket.tags.split(',') : [],
+      severity: bucket.severity,
+      selectedBucket: bucket,
+      isUpdateMode: true
+    });
+  };
+
+  showAlert(msg, successFlag) {
+    this.setState({
+      alertOpen: true,
+      alertMsg: msg,
+      isSuccess: successFlag
+    })
+    setTimeout(() => {
+      this.setState({
+        alertOpen: false,
+        alertMsg: '',
+        isSuccess: successFlag
+      })
+    }, 3000)
+  }
 
   render() {
     const {
@@ -143,103 +208,159 @@ class CreateBucket extends Component {
       tagInput,
       tags,
       severity,
-      bucketType,
       validationErrors,
       saveStatus,
+      buckets,
+      selectedBucket,
+      alertOpen,
+      alertMsg,
+      isSuccess,
+      isUpdateMode
     } = this.state;
 
     return (
-      <Grid container justify="center" spacing={2} style={{ marginLeft: '10px' }}>
-        <Grid item xs={12} sm={6}>
-          <Box mt={5} mb={2} p={3} border={1} borderRadius={4}>
-            <Typography variant="h6" component="h2" align="left" gutterBottom>
-              CREATE BUCKET
-            </Typography>
-            <form onSubmit={this.handleSubmit}>
-              <TextField
-                label="Bucket Name"
-                value={bucketName}
-                onChange={(e) => this.setState({ bucketName: e.target.value })}
-                required
-                fullWidth
-                style={{ marginBottom: '20px' }}
-              />
-              <TextField
-                label="Bucket Description"
-                value={bucketDescription}
-                onChange={(e) => this.setState({ bucketDescription: e.target.value })}
-                required
-                fullWidth
-                multiline
-                rows={4}
-                style={{ marginBottom: '20px' }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-                <TextField
-                  label="Tags"
-                  value={tagInput}
-                  onChange={this.handleTagChange}
-                  onKeyPress={this.handleTagKeyPress}
-                  fullWidth
-                  variant="outlined"
-                  style={{ flexGrow: 1, marginRight: '10px' }}
-                />
-                <Button variant="outlined" color="primary" onClick={this.addTag}>
-                  Add
-                </Button>
-              </div>
-              <div>
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={() => this.handleDeleteTag(tag)}
-                    style={{ marginRight: '5px', marginBottom: '5px' }}
-                  />
-                ))}
-              </div>
-              <FormControl fullWidth required style={{ marginBottom: '20px' }}>
-                <InputLabel>Severity</InputLabel>
-                <Select value={severity} onChange={(e) => this.setState({ severity: e.target.value })}>
-                  <MenuItem value="HIGH">High</MenuItem>
-                  <MenuItem value="MEDIUM">Medium</MenuItem>
-                  <MenuItem value="LOW">Low</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth required style={{ marginBottom: '20px' }}>
-                <InputLabel>Bucket Type</InputLabel>
-                <Select value={bucketType} onChange={(e) => this.setState({ bucketType: e.target.value })}>
-                  <MenuItem value="FAILURE">Failure</MenuItem>
-                  <MenuItem value="SUCCESS">Success</MenuItem>
-                </Select>
-              </FormControl>
-              <Box mt={2} display="flex" justifyContent="flex-end">
-                <Button type="submit" color="primary" variant="contained" style={{ marginRight: '10px' }}>
-                  Save
-                </Button>
-                <Button type="button" onClick={this.clearForm} color="primary" variant="contained">
-                  Clear
-                </Button>
+      <div>
+        <Box sx={{ flexGrow: 1, mt: 2, ml: 2, mr: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Box display="flex" alignItems="center" sx={{ height: "100%" }}>
+                <Breadcrumbs aria-label="breadcrumb">
+                  <Typography>MENU</Typography>
+                  <Typography color="textPrimary">BUCKET</Typography>
+                </Breadcrumbs>
               </Box>
-              {validationErrors.map((error) => (
-                <Alert key={error} severity="error" style={{ marginTop: '10px' }}>
-                  {error}
-                </Alert>
-              ))}
-              {saveStatus === 'success' && (
-                <Alert severity="success" style={{ marginTop: '10px' }}>
-                  Data saved successfully!
-                </Alert>
-              )}
-              {saveStatus === 'error' && (
-                <Alert severity="error" style={{ marginTop: '10px' }}>
-                  Error occurred while saving data. Please try again.
-                </Alert>
-              )}
-            </form>
-          </Box>
-        </Grid>
-      </Grid>
+            </Grid>
+          </Grid>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Grid container justify="center" spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Box border={1} padding={3} ml={2} mt={2}
+                sx={{
+                  outline: '1px solid #1565c0',
+                  height: '550px',
+                  maxHeight: '550px',
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': { width: '8px' },
+                  '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: '#888888',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' },
+                }}
+              >
+                <Typography variant="h6" component="h2" align="left" gutterBottom color="primary">
+                  {isUpdateMode ? 'UPDATE BUCKET' : 'CREATE BUCKET'}
+                </Typography>
+                {
+                  alertOpen ?
+                    (<Grid item xs={12} sx={{ mb: 2 }}>
+                      <Alert variant="filled" severity={isSuccess ? 'success' : 'error'}>
+                        {alertMsg}
+                      </Alert>
+                    </Grid>) : <></>
+                }
+                <form onSubmit={this.handleSubmit}>
+                  <TextField
+                    label="Bucket Name"
+                    value={bucketName}
+                    onChange={(e) => this.setState({ bucketName: e.target.value })}
+                    required
+                    fullWidth
+                    style={{ marginBottom: '20px', marginTop: '20px' }}
+                    disabled={isUpdateMode}
+                  />
+                  <TextField
+                    label="Bucket Description"
+                    value={bucketDescription}
+                    onChange={(e) => this.setState({ bucketDescription: e.target.value })}
+                    required
+                    fullWidth
+                    multiline
+                    rows={4}
+                    style={{ marginBottom: '20px' }}
+                    inputProps={{ maxLength: 1000 }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                    <TextField
+                      label="Tags *"
+                      value={tagInput}
+                      onChange={this.handleTagChange}
+                      onKeyPress={this.handleTagKeyPress}
+                      fullWidth
+                      variant="outlined"
+                      style={{ flexGrow: 1, marginRight: '10px' }}
+                    />
+                    <Button variant="outlined" color="primary" onClick={this.addTag}>
+                      Add
+                    </Button>
+                  </div>
+                  <div>
+                    {tags.map((tag) => (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        onDelete={() => this.handleDeleteTag(tag)}
+                        style={{ marginRight: '5px', marginBottom: '5px' }}
+                      />
+                    ))}
+                  </div>
+                  <FormControl fullWidth required style={{ marginBottom: '20px', marginTop: '10px' }}>
+                    <InputLabel>Severity</InputLabel>
+                    <Select value={severity} onChange={(e) => this.setState({ severity: e.target.value })} label="severity">
+                      <MenuItem value="High">HIGH</MenuItem>
+                      <MenuItem value="Medium">MEDIUM</MenuItem>
+                      <MenuItem value="Low">LOW</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Box mt={2} display="flex" justifyContent="flex-end">
+                    <Button type="submit" color="primary" variant="contained" style={{ marginRight: '10px' }}>
+                      {isUpdateMode ? 'UPDATE' : 'CREATE'}
+                    </Button>
+                    <Button type="button" onClick={this.clearForm} color="primary" variant="contained">
+                      Clear
+                    </Button>
+                  </Box>
+                  {validationErrors.map((error) => (
+                    <Alert key={error} severity="error" style={{ marginTop: '10px' }}>
+                      {error}
+                    </Alert>
+                  ))}
+                  {saveStatus === 'success' && (
+                    <Alert severity="success" style={{ marginTop: '10px' }}>
+                      Data saved successfully!
+                    </Alert>
+                  )}
+                  {saveStatus === 'error' && (
+                    <Alert severity="error" style={{ marginTop: '10px' }}>
+                      Error occurred while saving data. Please try again.
+                    </Alert>
+                  )}
+                </form>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Box border={1} sx={{
+                outline: '1px solid #1565c0', padding: '16px', flex: '1 1 50%', marginBottom: '16px',
+                mr: 2,
+                mt: 2,
+                p: 3,
+                height: '550px', overflowY: 'auto',
+                '&::-webkit-scrollbar': { width: '8px' },
+                '&::-webkit-scrollbar-track': { backgroundColor: '#F5F5F5' },
+                '&::-webkit-scrollbar-thumb': { backgroundColor: '#888888', borderRadius: '4px' },
+                '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#555555' }
+              }}>
+                <Typography variant="h6" component="h2" align="left" gutterBottom color="primary">
+                  LIST BUCKETS
+                </Typography>
+                <ListBuckets buckets={buckets} onSelect={this.handleBucketSelect} selectedBucket={selectedBucket} />
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </div>
     );
   }
 }
